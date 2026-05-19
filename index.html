@@ -492,7 +492,7 @@ function onSlider(input, id, g1part, col){
   var parts=(poids/g1part).toFixed(2);
   var mg=Math.round((poids/g1part)*20);
   document.getElementById('parts-'+id).textContent=parts;
-  document.getElementById('ref-'+id).textContent=poids+' g · '+mg+' mg de phé · '+g1part+' g = 1 part';
+  document.getElementById('ref-'+id).textContent=poids+' g · '+g1part+' g = 1 part';
   updatePoids(id,poids);
 }
 
