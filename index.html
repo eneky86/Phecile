@@ -132,6 +132,24 @@ option{padding:4px 6px;color:#1a1a1a}
 /* toast */
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:11px 20px;border-radius:30px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1}
+
+/* TOTAL PARTS */
+.total-card{margin:10px 12px 0;background:#fff;border-radius:16px;padding:14px 16px;display:none;align-items:center;justify-content:space-between;border:2.5px solid var(--navy)}
+.total-label{font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.5px}
+.total-value{font-size:32px;font-weight:700;color:var(--navy);line-height:1}
+.total-sub{font-size:10px;color:#888;margin-top:2px}
+/* BOUTON SUPPRIMER TOUT */
+.del-all-btn{margin:8px 12px 0;background:none;border:1.5px solid rgba(255,255,255,.3);border-radius:12px;padding:9px 14px;display:none;align-items:center;justify-content:center;gap:7px;cursor:pointer;width:calc(100% - 24px);font-family:inherit}
+.del-all-btn:active{transform:scale(.97)}
+.del-all-txt{font-size:12px;font-weight:600;color:rgba(255,255,255,.75)}
+/* CONFIRM DIALOG */
+.confirm-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);z-index:9999;display:none;align-items:center;justify-content:center;padding:20px}
+.confirm-box{background:#fff;border-radius:20px;padding:24px 20px;max-width:340px;width:100%;text-align:center}
+.confirm-title{font-size:16px;font-weight:700;color:#1a1a1a;margin-bottom:8px}
+.confirm-msg{font-size:13px;color:#666;line-height:1.5;margin-bottom:20px}
+.confirm-btns{display:flex;gap:10px}
+.confirm-cancel{flex:1;padding:12px;border-radius:12px;border:1.5px solid #e0e0e0;background:#fff;font-size:14px;font-weight:600;color:#666;cursor:pointer;font-family:inherit}
+.confirm-ok{flex:1;padding:12px;border-radius:12px;border:none;background:var(--co-ic);font-size:14px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit}
 </style>
 </head>
 <body>
@@ -154,6 +172,36 @@ option{padding:4px 6px;color:#1a1a1a}
   </button>
 
   <div class="items-list" id="items-list"></div>
+
+  <!-- TOTAL PARTS -->
+  <div class="total-card" id="total-card">
+    <div>
+      <div class="total-label">&#931; Total phé</div>
+      <div class="total-sub" id="total-mg"></div>
+    </div>
+    <div style="text-align:right">
+      <div class="total-value" id="total-parts">0</div>
+      <div class="total-sub">parts</div>
+    </div>
+  </div>
+
+  <!-- BOUTON SUPPRIMER TOUT -->
+  <button class="del-all-btn" id="del-all-btn" onclick="confirmDeleteAll()">
+    <span style="font-size:16px">&#128465;</span>
+    <span class="del-all-txt">Supprimer tous les aliments</span>
+  </button>
+
+  <!-- CONFIRM SUPPRIMER TOUT -->
+  <div class="confirm-overlay" id="confirm-overlay">
+    <div class="confirm-box">
+      <div class="confirm-title">Supprimer tous les aliments ?</div>
+      <div class="confirm-msg">Cette action supprimera tous les aliments de votre liste. Elle est irréversible.</div>
+      <div class="confirm-btns">
+        <button class="confirm-cancel" onclick="closeConfirm()">Annuler</button>
+        <button class="confirm-ok" onclick="deleteAll()">Tout supprimer</button>
+      </div>
+    </div>
+  </div>
 
   <div class="ftcards">
     <div class="ic src">
@@ -446,20 +494,24 @@ function updatePoids(id, poids){
 function renderHome(){
   var arr=loadFoods();
   var el=document.getElementById('items-list');
+  var totalCard=document.getElementById('total-card');
+  var delBtn=document.getElementById('del-all-btn');
   if(arr.length===0){
     el.innerHTML='<div class="empty-state">Aucun aliment enregistré.<br>Appuyez sur <strong>+ Ajouter un aliment</strong> pour commencer !</div>';
+    totalCard.style.display='none';
+    delBtn.style.display='none';
     return;
   }
   el.innerHTML='';
+  var totalParts=0;
   arr.forEach(function(food){
     var pct=Math.round(((food.poids-SLIDER_MIN)/(SLIDER_MAX-SLIDER_MIN))*100);
-    var parts=(food.poids/food.g1part).toFixed(2);
-    var mg=Math.round((food.poids/food.g1part)*20);
+    var parts=food.poids/food.g1part;
+    totalParts+=parts;
+    var mg=Math.round(parts*20);
     var col=food.mode;
-
     var badgeClass='badge-'+col;
-    var badgeTxt=col==='yw'?'Liste':col==='gn'?'Disque vert':'Disque rouge';
-
+    var badgeTxt=col='yw'?'Liste':col==='gn'?'Disque vert':'Disque rouge';
     var div=document.createElement('div');
     div.className='food-item';
     div.innerHTML=
@@ -476,13 +528,17 @@ function renderHome(){
           'style="--pct:'+pct+'%" '+
           'oninput="onSlider(this,'+food.id+','+food.g1part+',\''+col+'\')">'+
         '<div class="food-result">'+
-          '<div class="food-parts '+col+'" id="parts-'+food.id+'">'+parts+'</div>'+
+          '<div class="food-parts '+col+'" id="parts-'+food.id+'">'+parts.toFixed(2)+'</div>'+
           '<div class="food-unit">parts</div>'+
         '</div>'+
       '</div>'+
-      '<div class="food-ref" id="ref-'+food.id+'">'+food.poids+' g · ' +food.g1part+' g = 1 part</div>';
+      '<div class="food-ref" id="ref-'+food.id+'">'+food.poids+' g · '+food.g1part+' g = 1 part</div>';
     el.appendChild(div);
   });
+  document.getElementById('total-parts').textContent=totalParts.toFixed(2);
+  document.getElementById('total-mg').textContent=Math.round(totalParts*20)+' mg de phé au total';
+  totalCard.style.display='flex';
+  delBtn.style.display='flex';
 }
 
 function onSlider(input, id, g1part, col){
@@ -494,6 +550,11 @@ function onSlider(input, id, g1part, col){
   document.getElementById('parts-'+id).textContent=parts;
   document.getElementById('ref-'+id).textContent=poids+' g · '+g1part+' g = 1 part';
   updatePoids(id,poids);
+  /* Recalcul total en temps réel */
+  var arr=loadFoods();
+  var total=arr.reduce(function(s,f){return s+(f.poids/f.g1part);},0);
+  document.getElementById('total-parts').textContent=total.toFixed(2);
+  document.getElementById('total-mg').textContent=Math.round(total*20)+' mg de phé au total';
 }
 
 function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -503,6 +564,12 @@ function showToast(msg){
   var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
   setTimeout(function(){t.classList.remove('show');},2200);
 }
+
+
+/* ── Supprimer tout ── */
+function confirmDeleteAll(){document.getElementById('confirm-overlay').style.display='flex';}
+function closeConfirm(){document.getElementById('confirm-overlay').style.display='none';}
+function deleteAll(){saveFoods([]);closeConfirm();renderHome();showToast('✔ Tous les aliments supprimés');}
 
 /* ── Init ── */
 renderList(A);
