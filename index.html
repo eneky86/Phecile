@@ -162,9 +162,15 @@ input:focus,select:focus{border-color:var(--brand);outline:2px solid var(--wash)
 .co-m input,.co-m select{border-left-color:var(--co-ic)}
 input[type=text]{font-weight:400}
 input::placeholder{color:#b7ac98;font-weight:400}
-select[size]{padding:5px;height:170px;font-size:13px;font-weight:400;line-height:1.4}
-optgroup{font-size:11px;font-weight:700;color:var(--muted);font-style:normal}
-option{padding:4px 6px;color:var(--ink)}
+.food-list-box{width:100%;max-height:220px;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1.5px solid var(--line);border-left:4px solid var(--brand);border-radius:10px;background:#fff;box-shadow:var(--sh-1)}
+.food-list-group{position:sticky;top:0;background:var(--cream);font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding:6px 12px;border-bottom:1px solid var(--line)}
+.food-list-item{padding:10px 13px;font-size:13.5px;color:var(--ink);cursor:pointer;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.food-list-item:last-child{border-bottom:none}
+.food-list-item:active{background:var(--yw-l)}
+.food-list-item.selected{background:var(--yw-l);color:var(--yw-t);font-weight:700}
+.food-list-g{font-size:10.5px;color:var(--muted);font-weight:400;flex-shrink:0}
+.food-list-item.selected .food-list-g{color:var(--yw-t);opacity:.75}
+.food-list-empty{padding:16px 13px;font-size:12.5px;color:var(--muted);text-align:center}
 .si{font-size:12px;font-weight:600;border-radius:8px;padding:8px 11px;margin-top:8px;display:none;line-height:1.4}
 .yw-m .si{background:var(--yw-l);color:var(--yw-t)}
 .val-ok{font-size:11px;font-weight:600;background:var(--gn-bg);color:var(--gn-t);border-radius:8px;padding:7px 11px;margin-top:7px;display:none}
@@ -329,7 +335,7 @@ option{padding:4px 6px;color:var(--ink)}
     </div>
     <div class="fd">
       <label class="fl" for="m1-aliment">Sélectionner dans la liste</label>
-      <select id="m1-aliment" size="7" onchange="onSelect()"></select>
+      <div class="food-list-box" id="m1-aliment" role="listbox"></div>
       <div class="si" id="m1-info"></div>
     </div>
     <button class="add-food-btn" onclick="addFromM1()">
@@ -471,23 +477,34 @@ function go(id){
   window.scrollTo(0,0);
 }
 
-/* ── Liste déroulante mode 1 ── */
+/* ── Liste d'aliments (mode 1) — liste HTML cliquable, fiable sur iOS ──
+   (un <select size> natif n'est pas affiché correctement par Safari iOS) */
 function renderList(arr){
-  var s=document.getElementById('m1-aliment');s.innerHTML='';var lc='';
+  var box=document.getElementById('m1-aliment');
+  if(arr.length===0){
+    box.innerHTML='<div class="food-list-empty">Aucun aliment trouvé.</div>';
+    return;
+  }
+  var html='',lc='';
   arr.forEach(function(a,i){
-    if(a.c!==lc){var og=document.createElement('optgroup');og.label='— '+a.c+' —';s.appendChild(og);lc=a.c;}
-    var op=document.createElement('option');op.value=i;op.textContent=a.n+' ('+a.g+' g = 1 part)';s.lastChild.appendChild(op);
+    if(a.c!==lc){html+='<div class="food-list-group">'+esc(a.c)+'</div>';lc=a.c;}
+    html+='<div class="food-list-item" data-idx="'+i+'" onclick="selectAliment('+i+')">'+
+      '<span>'+esc(a.n)+'</span><span class="food-list-g">'+a.g+' g = 1 part</span></div>';
   });
+  box.innerHTML=html;
 }
 function filterAliments(){
   var q=document.getElementById('m1-search').value.toLowerCase().trim();
   F=q?A.filter(function(a){return a.n.toLowerCase().includes(q);}):A.slice();
   renderList(F);document.getElementById('m1-info').style.display='none';selIdx=-1;
 }
-function onSelect(){
-  var s=document.getElementById('m1-aliment');if(s.value==='')return;
-  selIdx=parseInt(s.value);var a=F[selIdx];
-  if(a){var inf=document.getElementById('m1-info');inf.textContent='✔ '+a.n+' : '+a.g+' g = 1 part (20 mg de phé)';inf.style.display='block';}
+function selectAliment(i){
+  selIdx=i;var a=F[selIdx];
+  if(!a)return;
+  document.querySelectorAll('#m1-aliment .food-list-item.selected').forEach(function(el){el.classList.remove('selected');});
+  var el=document.querySelector('#m1-aliment .food-list-item[data-idx="'+i+'"]');
+  if(el)el.classList.add('selected');
+  var inf=document.getElementById('m1-info');inf.textContent='✔ '+a.n+' : '+a.g+' g = 1 part (20 mg de phé)';inf.style.display='block';
 }
 
 /* ── Vérification taux protéines modes 2 et 3 ── */
